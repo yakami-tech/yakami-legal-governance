@@ -9,8 +9,8 @@ Este repositório contém o **MVP do Protocolo de Governança** da YAKAMI TECH. 
 - **Rede:** Ethereum Sepolia Testnet.
 
 ## 📍 Endereços e Links
-- **Contrato de Auditoria:** `[COLE_AQUI_O_ENDEREÇO_DO_CONTRATO_0x...]`
-- **Etherscan:** [Link para o contrato na Sepolia]
+- **Contrato de Auditoria:** `0xd9145CCE52D386f254917e481eB44e9943F39138
+- **Etherscan:** https://sepolia.etherscan.io/address/0xd9145cce52d386f254917e481eb44e9943f39138
 
 ## 🎓 Alinhamento Acadêmico (PROFNIT)
 Este projeto serve como evidência técnica de transferência de tecnologia e proteção de propriedade intelectual, demonstrando como smart contracts podem reduzir custos de conformidade em mercados de carbono.
