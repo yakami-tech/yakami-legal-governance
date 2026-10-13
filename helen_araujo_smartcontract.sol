@@ -1,43 +1,50 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
 /**
- * @title RegistroDeUsuariosComRecompensa
- * @author Helen Araujo - YAKAMI TECH (Governança & Compliance)
- * * =========================================================================
- * 📚 FUNDAMENTAÇÃO TEÓRICA OBRIGATÓRIA (ITEM 7 DA TAREFA)
- * =========================================================================
- * 1. O QUE É GAS? 
- * Gas é a unidade de medida do esforço computacional necessário para executar 
- * operações na rede. Serve para prevenir spam e remunerar mineradores/validadores. [cite: 636]
- * * 2. COMO FUNCIONA A EVM?
- * A Ethereum Virtual Machine é o ambiente de execução descentralizado que garante
- * que o código seja processado de forma idêntica em todos os nós da rede. [cite: 637]
- * * 3. DIFERENÇA PARA CONTRATOS TRADICIONAIS:
- * Diferente dos contratos em papel, smart contracts são autoexecutáveis, 
- * imutáveis e não dependem de intermediários centrais para validação. [cite: 638]
- * =========================================================================
+ * @title YakamiAuditRegistry (Método RRDA - Rastreabilidade Regulatória de Dados)
+ * @author Helen Araújo & Erick Mattos — YAKAMI TECH (Governança & Compliance)
+ * @notice Contrato Inteligente da Camada YAKAMI-NET para registro imutável de órgãos ambientais, 
+ *         credenciamento de auditores e validação criptográfica de ativos (RWA / Créditos de Carbono).
+ * @dev Desenvolvido como evidência técnica do Método RRDA (PROFNIT) e alinhado ao Programa ProSAME / AEB.
  */
 
-contract RegistroDeUsuariosComRecompensa {
+contract YakamiAuditRegistry {
+
+    // Categorização dos Órgãos Reguladores
+    enum EsferaRegulatoria { Federal, EstadualAmazonia, EspacialPropriedade, Internacional }
+
+    struct OrgaoRegulador {
+        string sigla;               // Ex: "IBAMA", "IPAAM", "AEB", "VERRA"
+        string nomeCompleto;        // Ex: "Instituto Brasileiro do Meio Ambiente"
+        EsferaRegulatoria esfera;   // Categoria regulatória
+        bool ativo;                 // Status de homologação na rede
+    }
 
     struct Auditor {
         string nomeInstituicao; 
+        string siglaOrgaoVincular;  // Sigla do órgão regulador atrelado
         bool autorizado;        
-        uint256 saldoCreditos;  // Simulação de token (ERC-20 conceitual) [cite: 628]
-        uint256 dataRegistro;   // Prova de anterioridade para o INPI
+        uint256 saldoCreditos;      // Saldo de ativos de preservação (RWA / Carbono)
+        uint256 dataRegistro;       // Prova de anterioridade imutável (INPI / AEB)
     }
 
-    mapping(address => Auditor) public auditores; // Armazenamento [cite: 615]
-    address public autoridadeCertificadora; 
+    // Mapeamentos de Estado
+    mapping(address => Auditor) public auditores;
+    mapping(string => OrgaoRegulador) public orgaosReguladores;
+    
+    address public autoridadeCertificadora; // YAKAMI Tech (Governança Core)
 
-    // Eventos obrigatórios [cite: 624-626]
-    event UsuarioRegistrado(address indexed carteira, string nome);
-    event RecompensaEnviada(address indexed carteira, uint256 valor);
+    // Eventos Oficiais de Auditoria
+    event OrgaoReguladorCadastrado(string indexed sigla, string nomeCompleto, EsferaRegulatoria esfera);
+    event AuditorRegistrado(address indexed carteira, string nome, string siglaOrgao);
+    event CreditoEmitido(address indexed carteiraAuditor, uint256 quantidade, string hashReferencia);
 
-    // Erros customizados para otimização de Gas
+    // Erros Customizados para Economia de Gás
     error AcessoNegado();
     error AuditorJaRegistrado();
+    error OrgaoNaoCadastrado();
+    error AuditorNaoAutorizado();
 
     modifier somenteCertificadora() {
         if (msg.sender != autoridadeCertificadora) revert AcessoNegado();
@@ -46,50 +53,111 @@ contract RegistroDeUsuariosComRecompensa {
 
     constructor() {
         autoridadeCertificadora = msg.sender;
+
+        // =========================================================================
+        // 🏛️ INICIALIZAÇÃO DA MATRIZ NACIONAL DE ÓRGÃOS REGULADORES
+        // =========================================================================
+        
+        // 1. ÂMBITO FEDERAL
+        _cadastrarOrgao("IBAMA", "Inst. Bras. do Meio Ambiente e dos Rec. Nat. Renovaveis", EsferaRegulatoria.Federal);
+        _cadastrarOrgao("ICMBio", "Instituto Chico Mendes de Conservacao da Biodiversidade", EsferaRegulatoria.Federal);
+        _cadastrarOrgao("MAPA_CAR", "Ministerio da Agricultura / Cadastro Ambiental Rural", EsferaRegulatoria.Federal);
+        _cadastrarOrgao("SFB", "Servico Florestal Brasileiro", EsferaRegulatoria.Federal);
+        _cadastrarOrgao("ANA", "Agencia Nacional de Aguas e Saneamento Basico", EsferaRegulatoria.Federal);
+
+        // 2. ÂMBITO ESTADUAL (AMAZÔNIA LEGAL)
+        _cadastrarOrgao("IPAAM", "Instituto de Protecao Ambiental do Amazonas (AM)", EsferaRegulatoria.EstadualAmazonia);
+        _cadastrarOrgao("SEMA_AM", "Secretaria de Estado do Meio Ambiente do Amazonas", EsferaRegulatoria.EstadualAmazonia);
+        _cadastrarOrgao("SEMAS_PA", "Secretaria de Meio Ambiente e Sustentabilidade do Para", EsferaRegulatoria.EstadualAmazonia);
+        _cadastrarOrgao("SEDAM_RO", "Sec. de Estado do Desenvolvimento Ambiental de Rondonia", EsferaRegulatoria.EstadualAmazonia);
+        _cadastrarOrgao("IMAC_AC", "Instituto de Meio Ambiente do Acre", EsferaRegulatoria.EstadualAmazonia);
+        _cadastrarOrgao("SEMA_MT", "Secretaria de Estado de Meio Ambiente de Mato Grosso", EsferaRegulatoria.EstadualAmazonia);
+        _cadastrarOrgao("SEMA_AP", "Secretaria de Estado do Meio Ambiente do Amapa", EsferaRegulatoria.EstadualAmazonia);
+        _cadastrarOrgao("FEMARH_RR", "Fundacao Estadual do Meio Ambiente e Rec. Hidricos de Roraima", EsferaRegulatoria.EstadualAmazonia);
+        _cadastrarOrgao("NATURATINS", "Instituto do Natureza do Tocantins", EsferaRegulatoria.EstadualAmazonia);
+
+        // 3. ESPAÇO, CIÊNCIA & PROPRIEDADE INTELECTUAL
+        _cadastrarOrgao("AEB", "Agencia Espacial Brasileira (ProSAME / YAKAMI-SAT)", EsferaRegulatoria.EspacialPropriedade);
+        _cadastrarOrgao("INPI", "Instituto Nacional da Propriedade Industrial (Metodo RRDA)", EsferaRegulatoria.EspacialPropriedade);
+
+        // 4. PADRÕES INTERNACIONAIS (MERCADO DE CARBONO / ESG)
+        _cadastrarOrgao("VERRA", "Verra Verified Carbon Standard (VCS)", EsferaRegulatoria.Internacional);
+        _cadastrarOrgao("GOLD_STD", "Gold Standard for the Global Goals", EsferaRegulatoria.Internacional);
     }
 
     /**
-     * @dev Registra um novo auditor no sistema de compliance. [cite: 618]
+     * @dev Função interna para cadastrar órgãos reguladores na implantação.
      */
-    function registrarUsuario(string memory _nome) public {
-        if (auditores[msg.sender].autorizado) revert AuditorJaRegistrado(); // Segurança [cite: 633]
-        require(bytes(_nome).length > 0, "Nome obrigatorio"); // Validação [cite: 632]
+    function _cadastrarOrgao(string memory _sigla, string memory _nome, EsferaRegulatoria _esfera) internal {
+        orgaosReguladores[_sigla] = OrgaoRegulador({
+            sigla: _sigla,
+            nomeCompleto: _nome,
+            esfera: _esfera,
+            ativo: true
+        });
+        emit OrgaoReguladorCadastrado(_sigla, _nome, _esfera);
+    }
+
+    /**
+     * @notice Cadastra dinamicamente novos órgãos reguladores ambientais.
+     */
+    function adicionarOrgaoRegulador(
+        string memory _sigla, 
+        string memory _nomeCompleto, 
+        EsferaRegulatoria _esfera
+    ) public somenteCertificadora {
+        _cadastrarOrgao(_sigla, _nomeCompleto, _esfera);
+    }
+
+    /**
+     * @notice Registra um auditor atrelado a um órgão ambiental homologado.
+     * @param _nome Razão social ou nome do auditor legal.
+     * @param _siglaOrgao Sigla do órgão vinculador (ex: "IBAMA", "IPAAM", "AEB").
+     */
+    function registrarAuditor(string memory _nome, string memory _siglaOrgao) public {
+        if (auditores[msg.sender].autorizado) revert AuditorJaRegistrado();
+        if (!orgaosReguladores[_siglaOrgao].ativo) revert OrgaoNaoCadastrado();
+        require(bytes(_nome).length > 0, "Nome obrigatorio");
 
         auditores[msg.sender] = Auditor({
             nomeInstituicao: _nome,
+            siglaOrgaoVincular: _siglaOrgao,
             autorizado: true,
             saldoCreditos: 0,
             dataRegistro: block.timestamp
         });
 
-        emit UsuarioRegistrado(msg.sender, _nome);
+        emit AuditorRegistrado(msg.sender, _nome, _siglaOrgao);
     }
 
     /**
-     * @dev Consulta dados e saldo de créditos ambientais. [cite: 619]
+     * @notice Emite e valida créditos ambientais/telemetria com atestação de hash criptográfico.
+     * @param _carteiraAuditor Carteira do auditor credenciado.
+     * @param _quantidade Quantidade de unidades ambientais ou de dados validados.
+     * @param _hashReferencia Hash do relatório/telemetria gerado no YAKAMI-FLOW ou YAKAMI-SAT.
      */
-    function consultarUsuario(address _carteira) public view returns (string memory nome, uint256 saldo) {
+    function emitirCreditoAmbiental(
+        address _carteiraAuditor, 
+        uint256 _quantidade, 
+        string memory _hashReferencia
+    ) public somenteCertificadora {
+        if (!auditores[_carteiraAuditor].autorizado) revert AuditorNaoAutorizado();
+
+        auditores[_carteiraAuditor].saldoCreditos += _quantidade;
+
+        emit CreditoEmitido(_carteiraAuditor, _quantidade, _hashReferencia);
+    }
+
+    /**
+     * @notice Consulta dados de verificação de um auditor cadastrado.
+     */
+    function consultarAuditor(address _carteira) public view returns (
+        string memory nome, 
+        string memory orgaoVincular, 
+        uint256 saldo, 
+        uint256 dataRegistro
+    ) {
         Auditor memory a = auditores[_carteira];
-        return (a.nomeInstituicao, a.saldoCreditos);
+        return (a.nomeInstituicao, a.siglaOrgaoVincular, a.saldoCreditos, a.dataRegistro);
     }
-
-    /**
-     * @dev Distribui recompensas por auditoria validada. [cite: 622, 630]
-     */
-    function recompensarUsuario(address _carteira, uint256 _quantidade) public somenteCertificadora {
-        require(auditores[_carteira].autorizado, "Destinatario nao autorizado");
-        
-        auditores[_carteira].saldoCreditos += _quantidade;
-
-        emit RecompensaEnviada(_carteira, _quantidade);
-    }
-
-    /**
-     * 📌 CASO DE USO REAL (ITEM 8 DA TAREFA):
-     * Este contrato é a base do sistema de compliance da YAKAMI TECH. Ele atua como 
-     * um "Cartório Digital" que registra órgãos auditores (ex: IBAMA, Verra) e 
-     * emite créditos de preservação (RWA) de forma imutável. Isso gera uma Prova 
-     * de Anterioridade essencial para o registro de software no INPI e garante 
-     * a integridade dos dados ambientais da Amazônia no mercado internacional. 
-     */
 }
